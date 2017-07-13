@@ -12,15 +12,10 @@ package com.chookapp.org.bracketeer.cdt;
 
 import java.util.EmptyStackException;
 import java.util.Stack;
-import java.util.StringJoiner;
-import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import org.eclipse.cdt.core.dom.ast.ASTVisitor;
-import org.eclipse.cdt.core.dom.ast.IASTAttribute;
-import org.eclipse.cdt.core.dom.ast.IASTAttributeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTBreakStatement;
 import org.eclipse.cdt.core.dom.ast.IASTCaseStatement;
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
@@ -363,17 +358,8 @@ public class ClosingBracketHintVisitor extends ASTVisitor
         String hint = ""; //$NON-NLS-1$
         if( cond != null )
             hint = cond.getRawSignature();
-        hint = "for( "+hint+" )"; //$NON-NLS-1$ //$NON-NLS-2$
-        int startLoc = statement.getFileLocation().getNodeOffset();
-        _scopeStack.push(new ScopeInfo(hint, startLoc, statement));
-        
-        IASTStatement body = statement.getBody();
-        if( body instanceof IASTCompoundStatement)
-        {
-            IASTFileLocation location = body.getFileLocation();
-            int endLoc = location.getNodeOffset()+location.getNodeLength()-1;            
-            _container.add(new Hint("for", startLoc, endLoc, hint)); //$NON-NLS-1$ 
-        }
+
+        visitForCommon(hint,  statement, statement.getBody());
     }
 
     private void visitRangeFor(ICPPASTRangeBasedForStatement statement) throws BadLocationException
@@ -384,17 +370,22 @@ public class ClosingBracketHintVisitor extends ASTVisitor
     	String hint = ""; //$NON-NLS-1$
     	if( cond != null )
     		hint = cond.getRawSignature();
+    	
+    	visitForCommon(hint, statement, statement.getBody());
+    }
+    
+    private void visitForCommon(String hint, IASTStatement statement, IASTStatement body) throws BadLocationException
+    {
     	hint = "for( "+hint+" )"; //$NON-NLS-1$ //$NON-NLS-2$
     	int startLoc = statement.getFileLocation().getNodeOffset();
     	_scopeStack.push(new ScopeInfo(hint, startLoc, statement));
     	
-    	IASTStatement body = statement.getBody();
-    	if( body instanceof IASTCompoundStatement)
-    	{
-    		IASTFileLocation location = body.getFileLocation();
-    		int endLoc = location.getNodeOffset()+location.getNodeLength()-1;            
-    		_container.add(new Hint("for", startLoc, endLoc, hint)); //$NON-NLS-1$ 
-    	}
+        if( body instanceof IASTCompoundStatement)
+        {
+            IASTFileLocation location = body.getFileLocation();
+            int endLoc = location.getNodeOffset()+location.getNodeLength()-1;            
+            _container.add(new Hint("for", startLoc, endLoc, hint)); //$NON-NLS-1$ 
+        }
     }
     
     private void visitWhile(IASTWhileStatement statement) throws BadLocationException
