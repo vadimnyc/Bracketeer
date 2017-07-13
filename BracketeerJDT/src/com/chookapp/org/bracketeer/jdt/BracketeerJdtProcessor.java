@@ -94,7 +94,7 @@ public class BracketeerJdtProcessor extends BracketeerProcessor
             return;
         }
         
-        ASTParser astp = ASTParser.newParser(AST.JLS3);
+        ASTParser astp = ASTParser.newParser(AST.JLS8);
         astp.setSource(_typeRoot);
         astp.setResolveBindings(false);
         CompilationUnit cu = (CompilationUnit) astp.createAST(null);

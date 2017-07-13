@@ -12,6 +12,8 @@ package com.chookapp.org.bracketeer.cdt;
 
 import java.util.EmptyStackException;
 import java.util.Stack;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.eclipse.cdt.core.dom.ast.ASTVisitor;
 import org.eclipse.cdt.core.dom.ast.IASTBreakStatement;
@@ -37,6 +39,7 @@ import org.eclipse.cdt.core.dom.ast.IASTStatement;
 import org.eclipse.cdt.core.dom.ast.IASTSwitchStatement;
 import org.eclipse.cdt.core.dom.ast.IASTWhileStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTIfStatement;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNameSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTQualifiedName;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateId;
@@ -457,12 +460,29 @@ public class ClosingBracketHintVisitor extends ASTVisitor
         } 
         else if( name instanceof ICPPASTQualifiedName)
         {
-            IASTName[] names = ((ICPPASTQualifiedName) name).getNames();
+        	List<IASTName> names = getNames((ICPPASTQualifiedName) name);
             for (IASTName n : names)
                 addBrackets(n);
         }        
     }
-
+    
+	public List<IASTName> getNames(ICPPASTQualifiedName qualifiedName) {
+		final IASTName fLastName = qualifiedName.getLastName();
+		final List<IASTName> result = new ArrayList<IASTName>();
+		for (ICPPASTNameSpecifier nameSpecifier : qualifiedName.getQualifier()) {
+			if (nameSpecifier instanceof IASTName) {
+				result.add((IASTName) nameSpecifier);
+			} else {
+				throw new UnsupportedOperationException("Can't use getNames() on a " +  //$NON-NLS-1$
+						"qualified name that includes a decltype-specifier. Use " +     //$NON-NLS-1$
+						"getQualifier() and getLastName() instead.");                   //$NON-NLS-1$
+			}
+		}
+		if (fLastName != null)
+			result.add(fLastName);
+		return result;
+	}
+	
     private void addBrackets(IASTNode[] args) throws BadLocationException
     {
         if(args == null || args.length == 0)
