@@ -12,10 +12,15 @@ package com.chookapp.org.bracketeer.cdt;
 
 import java.util.EmptyStackException;
 import java.util.Stack;
+import java.util.StringJoiner;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import org.eclipse.cdt.core.dom.ast.ASTVisitor;
+import org.eclipse.cdt.core.dom.ast.IASTAttribute;
+import org.eclipse.cdt.core.dom.ast.IASTAttributeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTBreakStatement;
 import org.eclipse.cdt.core.dom.ast.IASTCaseStatement;
 import org.eclipse.cdt.core.dom.ast.IASTCompositeTypeSpecifier;
@@ -31,6 +36,7 @@ import org.eclipse.cdt.core.dom.ast.IASTForStatement;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDeclarator;
 import org.eclipse.cdt.core.dom.ast.IASTFunctionDefinition;
 import org.eclipse.cdt.core.dom.ast.IASTIfStatement;
+import org.eclipse.cdt.core.dom.ast.IASTInitializerClause;
 import org.eclipse.cdt.core.dom.ast.IASTName;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTParameterDeclaration;
@@ -43,6 +49,7 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNameSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTNamespaceDefinition;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTQualifiedName;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTRangeBasedForStatement;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTTemplateId;
 import org.eclipse.jface.text.BadLocationException;
 
@@ -155,6 +162,10 @@ public class ClosingBracketHintVisitor extends ASTVisitor
             
             if( statement instanceof IASTForStatement )
                 visitFor((IASTForStatement) statement);
+            
+            if( statement instanceof ICPPASTRangeBasedForStatement) {
+            	visitRangeFor((ICPPASTRangeBasedForStatement)statement);
+            }
             
             if( statement instanceof IASTWhileStatement )
                 visitWhile((IASTWhileStatement) statement);
@@ -364,6 +375,27 @@ public class ClosingBracketHintVisitor extends ASTVisitor
             _container.add(new Hint("for", startLoc, endLoc, hint)); //$NON-NLS-1$ 
         }
     }
+
+    private void visitRangeFor(ICPPASTRangeBasedForStatement statement) throws BadLocationException
+    {
+    	/* TODO: specific params: show also initializer && increment expressions */
+    	
+    	IASTInitializerClause cond = statement.getInitializerClause();
+    	String hint = ""; //$NON-NLS-1$
+    	if( cond != null )
+    		hint = cond.getRawSignature();
+    	hint = "for( "+hint+" )"; //$NON-NLS-1$ //$NON-NLS-2$
+    	int startLoc = statement.getFileLocation().getNodeOffset();
+    	_scopeStack.push(new ScopeInfo(hint, startLoc, statement));
+    	
+    	IASTStatement body = statement.getBody();
+    	if( body instanceof IASTCompoundStatement)
+    	{
+    		IASTFileLocation location = body.getFileLocation();
+    		int endLoc = location.getNodeOffset()+location.getNodeLength()-1;            
+    		_container.add(new Hint("for", startLoc, endLoc, hint)); //$NON-NLS-1$ 
+    	}
+    }
     
     private void visitWhile(IASTWhileStatement statement) throws BadLocationException
     {
@@ -476,7 +508,7 @@ public class ClosingBracketHintVisitor extends ASTVisitor
         } 
         else if( name instanceof ICPPASTQualifiedName)
         {
-        	List<IASTName> names = getNames((ICPPASTQualifiedName) name);
+        	final List<IASTName> names = getNames((ICPPASTQualifiedName) name);
             for (IASTName n : names)
                 addBrackets(n);
         }        
